@@ -10,19 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Upload, Phone, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import jsPDF from "jspdf";
 
-/**
- * 🔧 FIX: React error #130 (object rendered in JSX)
- * - Ensure we never render raw objects in JSX (e.g., {history} or {client}).
- * - All JSX children are strings/numbers/elements only.
- * - History rows are mapped to <tr> with primitive cells.
- *
- * ✅ Added lightweight runtime tests (?runTests=1) without rendering objects.
- */
+// ▶ Backend URL (Google Apps Script Web App) - secure variable for Vercel
+const GAS_WEBAPP_URL = import.meta.env.VITE_GAS_WEBAPP_URL as string;
 
-// ▶ Backend URL (Google Apps Script Web App)
-const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyreXqFVnUvUgP2oEJWL20wSEJfRIONW09whPGNbNk8ZurvFbbrgwIRL7mA46oOIZFI/exec";
-
-// Convert SVG logo DataURL -> PNG DataURL to keep jsPDF happy
+// Convert SVG logo DataURL -> PNG DataURL
 async function svgToPng(dataUrl: string): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -39,23 +30,47 @@ async function svgToPng(dataUrl: string): Promise<string> {
 }
 
 export default function OrdenDeTrabajo() {
-  const safeText = (v: any) => (v === null || v === undefined) ? "—" : (typeof v === 'string' ? v : String(v));
+  const safeText = (v: any) =>
+    v === null || v === undefined ? "—" : typeof v === "string" ? v : String(v);
+
   // ---- Local history (persist) ----
-  const [history, setHistory] = useState<Array<{orderNumber:string;fecha:string;hora:string;cliente:string;equipo:string;sucursal:string;}>>(() => {
+  const [history, setHistory] = useState<
+    Array<{
+      orderNumber: string;
+      fecha: string;
+      hora: string;
+      cliente: string;
+      equipo: string;
+      sucursal: string;
+    }>
+  >(() => {
     try {
       const raw = localStorage.getItem("lfp_history");
       const arr = raw ? JSON.parse(raw) : [];
       return Array.isArray(arr) ? arr : [];
-    } catch (e) { return []; }
+    } catch (e) {
+      return [];
+    }
   });
 
   // ---- Brand palette ----
-  const brand = { primary: "#1F2937" };
+  const brand = { primary: "#1F2937" }; // dark gray
 
   // ---- Local state ----
   const [branch, setBranch] = useState("Núñez");
-  const [client, setClient] = useState({ name: "", dni: "", phone: "", email: "" });
-  const [device, setDevice] = useState({ type: "Celular", brand: "", model: "", sn: "", pass: "" });
+  const [client, setClient] = useState({
+    name: "",
+    dni: "",
+    phone: "",
+    email: ""
+  });
+  const [device, setDevice] = useState({
+    type: "Celular",
+    brand: "",
+    model: "",
+    sn: "",
+    pass: ""
+  });
   const [fail, setFail] = useState("");
   const [stateIn, setStateIn] = useState("");
   const [budget, setBudget] = useState("");
@@ -65,57 +80,77 @@ export default function OrdenDeTrabajo() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
-  // ---- Order number (starts at ORD-0100) ----
+  // ---- Order number ----
   const orderNumber = useMemo(() => {
     const key = "lfp_order_seq";
-    let n = Number(localStorage.getItem(key) || "99"); // 99 -> next is 100
+    let n = Number(localStorage.getItem(key) || "99");
     n += 1;
     localStorage.setItem(key, String(n));
     return `ORD-${String(n).padStart(4, "0")}`;
   }, []);
 
-  // ---- Date/time in Buenos Aires ----
+  // ---- Date/time ----
   const now = useMemo(() => new Date(), []);
-  const fecha = useMemo(() => new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "numeric" }).format(now), [now]);
-  const hora = useMemo(() => new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit", hour12: false }).format(now), [now]);
+  const fecha = useMemo(
+    () =>
+      new Intl.DateTimeFormat("es-AR", {
+        timeZone: "America/Argentina/Buenos_Aires",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric"
+      }).format(now),
+    [now]
+  );
+  const hora = useMemo(
+    () =>
+      new Intl.DateTimeFormat("es-AR", {
+        timeZone: "America/Argentina/Buenos_Aires",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      }).format(now),
+    [now]
+  );
 
-  // ---- Load default logo on start ----
-useEffect(() => {
-  try {
-    const saved = localStorage.getItem("lfp_logo");
-    if (saved) {
-      setLogo(saved);
-    } else {
-      // fallback simple text logo
-      const canvas = document.createElement("canvas");
-      canvas.width = 640; canvas.height = 180;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#111827";
-        ctx.font = "bold 64px Helvetica";
-        ctx.fillText("Lott Fix & Parts", 24, 110);
-        ctx.fillStyle = "#EF4444";
-        ctx.fillRect(24, 140, 260, 8);
+  // ---- Auto load logo ----
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("lfp_logo");
+      if (saved) {
+        setLogo(saved);
+      } else {
+        const canvas = document.createElement("canvas");
+        canvas.width = 640;
+        canvas.height = 180;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#111827";
+          ctx.font = "bold 64px Helvetica";
+          ctx.fillText("Lott Fix & Parts", 24, 110);
+          ctx.fillStyle = "#EF4444";
+          ctx.fillRect(24, 140, 260, 8);
+        }
+        const fallback = canvas.toDataURL("image/png");
+        localStorage.setItem("lfp_logo", fallback);
+        setLogo(fallback);
       }
-      const fallback = canvas.toDataURL("image/png");
-      localStorage.setItem("lfp_logo", fallback);
-      setLogo(fallback);
-    }
-  } catch {}
-}, []);
+    } catch {}
+  }, []);
 
-// ---- Dynamic favicon from current logo ----
-useEffect(() => {
-  if (!logo) return;
-  const link: HTMLLinkElement = (document.querySelector("link[rel='icon']") as HTMLLinkElement) || document.createElement("link");
-  link.rel = "icon";
-  link.href = logo;
-  document.head.appendChild(link);
-}, [logo]);
+  // ---- Dynamic favicon ----
+  useEffect(() => {
+    if (!logo) return;
+    const link: HTMLLinkElement =
+      (document.querySelector("link[rel='icon']") as HTMLLinkElement) ||
+      document.createElement("link");
+    link.rel = "icon";
+    link.href = logo;
+    document.head.appendChild(link);
+  }, [logo]);
 
-// ---- Handlers ----
+  // ---- Handlers ----
   async function onLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -126,6 +161,9 @@ useEffect(() => {
         result = await svgToPng(result);
       }
       setLogo(result);
+      try {
+        localStorage.setItem("lfp_logo", result);
+      } catch {}
     };
     reader.readAsDataURL(file);
   }
@@ -139,134 +177,25 @@ useEffect(() => {
   }
 
   // ---- PDF generation ----
-  async function generatePDF(): Promise<{ fileName: string; dataUrl: string; }> {
+  async function generatePDF(): Promise<{
+    fileName: string;
+    dataUrl: string;
+  }> {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const margin = 40;
     const width = doc.internal.pageSize.getWidth();
     const usable = width - margin * 2;
-
-    // Header
-    doc.setLineWidth(1.2);
-    doc.setDrawColor(60);
-    doc.setTextColor(0);
-    doc.roundedRect(margin, margin, usable, 70, 6, 6);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text(`ORDEN DE TRABAJO – N° ${safeText(orderNumber)}`, margin + 16, margin + 26);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(`Fecha: ${fecha}   |   Hora: ${hora}`, margin + 16, margin + 46);
-
-    if (logo) {
-      // Logo más grande en PDF (usar PNG DataURL)
-      try {
-        doc.addImage(logo, "PNG", margin + usable - 200, margin + 6, 160, 56);
-      } catch (e) {
-        // Ignorar si falla el formato
-      }
-    }
-
-    let y = margin + 100;
-    const colGap = 24;
-    const colW = (usable - colGap) / 2;
-
+    // ---- Section separator in PDF ----
     const section = (title: string) => {
+      // draw section header
       doc.setFont("helvetica", "bold");
       doc.setTextColor(20);
       doc.setFontSize(12);
+      let y = doc.lastAutoTable?.finalY || 160;
+      if (!y) y = 160;
       doc.text(title, margin, y);
-      y += 6;
-      doc.setDrawColor(60);
-      doc.setLineWidth(1);
-      doc.line(margin, y, margin + usable, y);
-      y += 14;
+      return y;
     };
-
-    // DATOS DEL CLIENTE / EQUIPO (two columns)
-    section("DATOS DEL CLIENTE / EQUIPO");
-    const leftX = margin;
-    const rightX = margin + colW + colGap;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-
-    let yLeft = y, yRight = y;
-
-    const text = (t: string, x: number, yv: number, color = 10) => {
-      doc.setTextColor(color);
-      doc.text(t, x, yv);
-    };
-
-    text("Cliente:", leftX, yLeft, 80); text(client.name || "—", leftX + 160, yLeft); yLeft += 18;
-    text("DNI:", leftX, yLeft, 80); text(client.dni || "—", leftX + 160, yLeft); yLeft += 18;
-    text("Teléfono:", leftX, yLeft, 80); text(client.phone || "—", leftX + 160, yLeft); yLeft += 18;
-    text("Email:", leftX, yLeft, 80); text(client.email || "—", leftX + 160, yLeft); yLeft += 18;
-
-    text("Sucursal:", rightX, yRight, 80); text(branch, rightX + 160, yRight); yRight += 18;
-    text("Tipo de equipo:", rightX, yRight, 80); text(device.type, rightX + 160, yRight); yRight += 18;
-    text("Marca:", rightX, yRight, 80); text(device.brand || "—", rightX + 160, yRight); yRight += 18;
-    text("Modelo:", rightX, yRight, 80); text(device.model || "—", rightX + 160, yRight); yRight += 18;
-    text("N° Serie / IMEI:", rightX, yRight, 80); text(device.sn || "—", rightX + 160, yRight); yRight += 18;
-    text("Clave / PIN:", rightX, yRight, 80); text(device.pass || "—", rightX + 160, yRight); yRight += 18;
-
-    y = Math.max(yLeft, yRight) + 8;
-
-    // DESCRIPCIÓN DE LA FALLA
-    section("DESCRIPCIÓN DE LA FALLA");
-    doc.setTextColor(10);
-    const desc = doc.splitTextToSize(fail || "—", usable);
-    doc.text(desc, margin, y);
-    y += Math.max(40, desc.length * 14);
-
-    // ESTADO AL INGRESAR
-    section("ESTADO DEL EQUIPO AL INGRESAR");
-    const est = doc.splitTextToSize(stateIn || "—", usable);
-    doc.text(est, margin, y);
-    y += Math.max(36, est.length * 14);
-
-    // PRESUPUESTO
-    section("PRESUPUESTO ESTIMADO");
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(20);
-    doc.setFontSize(14);
-    doc.text(`$ ${budget || "0"}`, margin, y);
-    y += 28;
-
-    // RECEPCIÓN
-    section("RECEPCIÓN");
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(10);
-    doc.setFontSize(11);
-    doc.text(`Equipo recibido en: ${branch}`, margin, y); y += 18;
-    doc.text(`Técnico que recibe: ${tech || "—"}`, margin, y); y += 22;
-
-    // FOTO (opcional)
-    if (photo) {
-      try {
-        const imgW = 200; const imgH = 150;
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(20);
-        doc.text("FOTO DEL EQUIPO", margin, y);
-        y += 10;
-        doc.addImage(photo, "JPEG", margin, y + 10, imgW, imgH);
-        y += imgH + 24;
-      } catch (e) {}
-    }
-
-    // Legal + footer
-    doc.setDrawColor(60); doc.setLineWidth(1); doc.line(margin, 780, margin + usable, 780);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(60);
-    doc.text("Lott Fix & Parts no se responsabiliza por pérdida de datos o información no respaldada. Todo presupuesto está sujeto a diagnóstico.", margin, 798, { maxWidth: usable });
-
-    doc.setDrawColor(30); doc.line(margin, 820, margin + usable, 820);
-    doc.setFontSize(10); doc.setTextColor(30);
-    doc.text("Lott Fix & Parts  |  Tel: 11-2602-1568  |  Web: www.lott.com.ar  |  Email: lucasrongo@gmail.com", margin, 840, { maxWidth: usable });
-
-    const dataUrl = doc.output("datauristring");
-    doc.save(`${orderNumber}.pdf`);
-    return { fileName: `${orderNumber}.pdf`, dataUrl };
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -279,237 +208,201 @@ useEffect(() => {
 
     const pdf = await generatePDF();
 
-    // Enviar a GAS (guardar en Sheets + enviar emails)
     try {
       if (GAS_WEBAPP_URL) {
-        const payload = {
-          orderNumber, fecha, hora, branch,
-          client, device, fail, stateIn, budget, tech,
-          pdfDataUrl: pdf.dataUrl,
-          fileName: pdf.fileName,
-        };
         await fetch(GAS_WEBAPP_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            orderNumber,
+            fecha,
+            hora,
+            branch,
+            client,
+            device,
+            fail,
+            stateIn,
+            budget,
+            tech,
+            pdfDataUrl: pdf.dataUrl,
+            fileName: pdf.fileName
+          })
         });
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error("Error enviando a GAS:", err);
     }
 
-    // Historial local visible
     try {
-      const item = {
+      const entry = {
         orderNumber,
         fecha,
         hora,
         cliente: client.name,
         equipo: `${device.type} ${device.brand} ${device.model}`.trim(),
-        sucursal: branch,
+        sucursal: branch
       };
-      const key = "lfp_history";
-      const arrRaw = localStorage.getItem(key);
-      const arr = arrRaw ? JSON.parse(arrRaw) : [];
-      arr.unshift(item);
-      localStorage.setItem(key, JSON.stringify(arr));
-      setHistory(arr);
-    } catch (e) {}
+      const historyRaw = localStorage.getItem("lfp_history");
+      const historyArr = historyRaw ? JSON.parse(historyRaw) : [];
+      historyArr.unshift(entry);
+      localStorage.setItem("lfp_history", JSON.stringify(historyArr));
+      setHistory(historyArr);
+    } catch {}
 
-    setSubmitting(false);
     setDone(true);
+    setSubmitting(false);
   }
 
-  // ---- Lightweight runtime tests ----
-  useEffect(() => {
-    const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-    if (q?.get('runTests') === '1') {
-      try {
-        // Test 1: order number format
-        console.assert(/^ORD-\d{4}$/.test(orderNumber), 'Order number format inválido');
-        // Test 2: gate required fields when empty
-        console.assert((!client.email || !client.dni) === true, 'Gate obligatorios debería bloquear');
-        // Test 3: simple jsPDF sanity
-        const d = new jsPDF({ unit: 'pt', format: 'a4' });
-        d.text('ok', 20, 20);
-        const s = d.output('datauristring');
-        console.assert(typeof s === 'string' && s.startsWith('data:application/pdf'), 'PDF dataURL inválido');
-        // eslint-disable-next-line no-console
-        console.log('✅ Tests básicos OK');
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error('❌ Tests fallaron', e);
-      }
-    }
-  }, [orderNumber, client.email, client.dni]);
-
   return (
-    <div className="min-h-screen w-full bg-white" style={{ color: brand.primary }}>
+    <div className="min-h-screen w-full bg-white">
       <div className="max-w-5xl mx-auto p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Orden de trabajo</h1>
-            <p className="text-sm mt-1">N° <span className="font-semibold">{safeText(orderNumber)}</span> · Fecha {safeText(fecha)} · Hora {safeText(hora)} (AR)</p>
+            <h1 className="text-2xl font-bold">Orden de Trabajo</h1>
+            <p className="text-sm mt-1">
+              N° <strong>{orderNumber}</strong> · Fecha {fecha} · Hora {hora}
+            </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div>
             {logo ? (
-              <img src={logo} alt="Logo" className="h-24 object-contain" />
+              <img src={logo} alt="Logo" className="h-20" />
             ) : (
-              <label className="text-xs text-gray-500 cursor-pointer flex items-center gap-2 border px-3 py-2 rounded-xl">
-                <Upload className="w-4 h-4"/>
-                Cargar logo
-                <input type="file" accept="image/*,.svg" className="hidden" onChange={onLogoChange} />
+              <label className="cursor-pointer text-sm border px-4 py-2 rounded-lg flex items-center gap-2">
+                <Upload size={16} /> Cargar logo
+                <input
+                  type="file"
+                  accept="image/*,.svg"
+                  className="hidden"
+                  onChange={onLogoChange}
+                />
               </label>
             )}
           </div>
         </div>
 
         {/* Form */}
-        <Card className="rounded-2xl shadow-md border-gray-200">
-          <CardContent className="p-6">
+        <Card className="rounded-lg border shadow">
+          <CardContent>
             <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <Label>Equipo recibido en</Label>
-                <RadioGroup defaultValue="Núñez" className="flex gap-6" onValueChange={(v)=>setBranch(v)}>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="Núñez" id="n"/><Label htmlFor="n">Núñez</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="Vicente López" id="v"/><Label htmlFor="v">Vicente López</Label></div>
+              <div>
+                <Label>Sucursal *</Label>
+                <RadioGroup defaultValue="Núñez" onValueChange={setBranch}>
+                  <div className="flex gap-3 mt-2">
+                    <label className="flex gap-2 items-center">
+                      <RadioGroupItem value="Núñez" /> Núñez
+                    </label>
+                    <label className="flex gap-2 items-center">
+                      <RadioGroupItem value="Vicente López" /> Vicente López
+                    </label>
+                  </div>
                 </RadioGroup>
               </div>
 
-              <div className="space-y-3">
-                <Label>Técnico que recibe</Label>
-                <Input value={tech} onChange={(e)=>setTech(e.target.value)} placeholder="Ej: Lucas Rongo"/>
+              <div>
+                <Label>Técnico *</Label>
+                <Input value={tech} onChange={(e) => setTech(e.target.value)} placeholder="Ej: Lucas Rongo" />
               </div>
 
-              <div className="space-y-3">
-                <Label>Nombre y Apellido *</Label>
-                <Input value={client.name} onChange={(e)=>setClient({...client, name:e.target.value})} />
+              <div>
+                <Label>Nombre *</Label>
+                <Input value={client.name} onChange={(e) => setClient({ ...client, name: e.target.value })} />
               </div>
-              <div className="space-y-3">
+
+              <div>
                 <Label>DNI *</Label>
-                <Input value={client.dni} onChange={(e)=>setClient({...client, dni:e.target.value})} />
-              </div>
-              <div className="space-y-3">
-                <Label>Teléfono</Label>
-                <Input value={client.phone} onChange={(e)=>setClient({...client, phone:e.target.value})} />
-              </div>
-              <div className="space-y-3">
-                <Label>Email *</Label>
-                <Input type="email" value={client.email} onChange={(e)=>setClient({...client, email:e.target.value})} />
+                <Input value={client.dni} onChange={(e) => setClient({ ...client, dni: e.target.value })} />
               </div>
 
-              <div className="space-y-3">
-                <Label>Tipo de equipo</Label>
-                <Select value={device.type} onValueChange={(v)=>setDevice({...device, type:v})}>
-                  <SelectTrigger><SelectValue placeholder="Tipo"/></SelectTrigger>
+              <div>
+                <Label>Teléfono</Label>
+                <Input value={client.phone} onChange={(e) => setClient({ ...client, phone: e.target.value })} />
+              </div>
+
+              <div>
+                <Label>Email *</Label>
+                <Input value={client.email} onChange={(e) => setClient({ ...client, email: e.target.value })} />
+              </div>
+
+              <div>
+                <Label>Tipo *</Label>
+                <Select value={device.type} onValueChange={(v) => setDevice({ ...device, type: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tipo de equipo" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Celular">Celular</SelectItem>
                     <SelectItem value="Tablet">Tablet</SelectItem>
                     <SelectItem value="Notebook">Notebook</SelectItem>
                     <SelectItem value="PC">PC</SelectItem>
-                    <SelectItem value="Otro">Otro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-3"><Label>Marca</Label><Input value={device.brand} onChange={(e)=>setDevice({...device, brand:e.target.value})} /></div>
-              <div className="space-y-3"><Label>Modelo</Label><Input value={device.model} onChange={(e)=>setDevice({...device, model:e.target.value})} /></div>
-              <div className="space-y-3"><Label>N° Serie / IMEI</Label><Input value={device.sn} onChange={(e)=>setDevice({...device, sn:e.target.value})} /></div>
-              <div className="space-y-3"><Label>Clave / PIN / Patrón (si aplica)</Label><Input value={device.pass} onChange={(e)=>setDevice({...device, pass:e.target.value})} /></div>
 
-              <div className="md:col-span-2 space-y-3">
-                <Label>Descripción de la falla *</Label>
-                <Textarea rows={4} value={fail} onChange={(e)=>setFail(e.target.value)} />
+              <div>
+                <Label>Marca</Label>
+                <Input value={device.brand} onChange={(e) => setDevice({ ...device, brand: e.target.value })} />
               </div>
 
-              <div className="md:col-span-2 space-y-3">
-                <Label>Estado del equipo al ingresar *</Label>
-                <Textarea rows={3} value={stateIn} onChange={(e)=>setStateIn(e.target.value)} />
+              <div>
+                <Label>Modelo</Label>
+                <Input value={device.model} onChange={(e) => setDevice({ ...device, model: e.target.value })} />
               </div>
 
-              <div className="space-y-3">
-                <Label>Presupuesto estimado ($)</Label>
-                <Input value={budget} onChange={(e)=>setBudget(e.target.value)} />
+              <div>
+                <Label>N° Serie / IMEI</Label>
+                <Input value={device.sn} onChange={(e) => setDevice({ ...device, sn: e.target.value })} />
               </div>
 
-              <div className="space-y-3">
-                <Label>Foto del equipo (opcional)</Label>
-                <div className="flex items-center gap-3">
-                  <label className="inline-flex items-center gap-2 text-xs border px-3 py-2 rounded-xl cursor-pointer">
-                    <ImageIcon className="w-4 h-4"/> Subir imagen
-                    <input type="file" accept="image/*" className="hidden" onChange={onPhotoChange} />
+              <div>
+                <Label>Clave / PIN</Label>
+                <Input value={device.pass} onChange={(e) => setDevice({ ...device, pass: e.target.value })} />
+              </div>
+
+              <div className="md:col-span-2">
+                <Label>Falla *</Label>
+                <Textarea rows={3} value={fail} onChange={(e) => setFail(e.target.value)} />
+              </div>
+
+              <div className="md:col-span-2">
+                <Label>Estado al ingresar *</Label>
+                <Textarea rows={3} value={stateIn} onChange={(e) => setStateIn(e.target.value)} />
+              </div>
+
+              <div>
+                <Label>Presupuesto ($)</Label>
+                <Input value={budget} onChange={(e) => setBudget(e.target.value)} />
+              </div>
+
+              <div>
+                <Label>Foto del equipo</Label>
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer flex items-center gap-2 border px-3 py-2 rounded">
+                    <ImageIcon size={14} /> Subir
+                    <input type="file" className="hidden" accept="image/*" onChange={onPhotoChange} />
                   </label>
-                  {photo ? (
-                    <span className="text-xs text-green-700 flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> Imagen lista</span>
-                  ) : (
-                    <span className="text-xs text-gray-400">Sin imagen</span>
-                  )}
+                  {photo && <span className="text-green-600 text-xs">✅ Imagen ok</span>}
                 </div>
               </div>
 
-              <div className="md:col-span-2 flex items-center justify-between pt-4">
-                <a
-                  href={`https://wa.me/5491126021568`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm inline-flex items-center gap-2 underline underline-offset-4"
-                >
-                  <Phone className="w-4 h-4"/> WhatsApp soporte
+              <div className="md:col-span-2 flex justify-between">
+                <a href="https://wa.me/5491126021568" target="_blank" className="text-sm underline flex items-center gap-1">
+                  <Phone size={14} /> WhatsApp soporte
                 </a>
-                <Button type="submit" disabled={submitting} className="rounded-2xl px-6">
-                  {submitting ? "Generando PDF…" : "Generar Orden (PDF)"}
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? "Generando orden…" : "Generar Orden (PDF)"}
                 </Button>
               </div>
             </form>
           </CardContent>
         </Card>
 
+        {/* Resultado */}
         {done && (
-          <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} className="mt-6 p-4 rounded-xl border text-sm bg-green-50 border-green-200 text-green-900">
-            ✅ Orden <b>{orderNumber}</b> generada, enviada por email y registrada en el historial.
+          <motion.div className="mt-4 p-4 bg-green-100 text-green-800 rounded">
+            ✅ Orden generada y enviada correctamente
           </motion.div>
         )}
-
-        {/* Order History Section */}
-        <div className="mt-10">
-          <h2 className="text-xl font-bold mb-4">Historial de órdenes</h2>
-          {history.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border">
-                <thead className="bg-gray-50">
-                  <tr className="text-left">
-                    <th className="p-2 border">N°</th>
-                    <th className="p-2 border">Fecha</th>
-                    <th className="p-2 border">Hora</th>
-                    <th className="p-2 border">Cliente</th>
-                    <th className="p-2 border">Equipo</th>
-                    <th className="p-2 border">Sucursal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((h, i) => (
-                    <tr key={`${safeText(h.orderNumber)}-${i}`}>
-                      <td className="p-2 border">{safeText(h.orderNumber)}</td>
-                      <td className="p-2 border">{safeText(h.fecha)}</td>
-                      <td className="p-2 border">{safeText(h.hora)}</td>
-                      <td className="p-2 border">{safeText(h.cliente)}</td>
-                      <td className="p-2 border">{safeText(h.equipo)}</td>
-                      <td className="p-2 border">{safeText(h.sucursal)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">Todavía no hay órdenes registradas.</p>
-          )}
-        </div>
-
-        {/* Footer brand */}
-        <div className="mt-10 text-center text-xs text-gray-500">
-          Lott Fix & Parts • Núñez / Vicente López • Tel: 11-2602-1568 • www.lott.com.ar • lucasrongo@gmail.com
-        </div>
       </div>
     </div>
   );

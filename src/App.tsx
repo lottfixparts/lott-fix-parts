@@ -10,10 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Upload, Phone, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import jsPDF from "jspdf";
 
-// ▶ Backend URL (Google Apps Script Web App) - secure variable for Vercel
-const GAS_WEBAPP_URL = import.meta.env.VITE_GAS_WEBAPP_URL as string;
+const GAS_WEBAPP_URL = import.meta.env.VITE_GAS_WEBAPP_URL || "";
 
-// Convert SVG logo DataURL -> PNG DataURL
 async function svgToPng(dataUrl: string): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -30,47 +28,30 @@ async function svgToPng(dataUrl: string): Promise<string> {
 }
 
 export default function OrdenDeTrabajo() {
-  const safeText = (v: any) =>
-    v === null || v === undefined ? "—" : typeof v === "string" ? v : String(v);
+  const safeText = (v: any) => (v === null || v === undefined ? "—" : typeof v === "string" ? v : String(v));
 
-  // ---- Local history (persist) ----
   const [history, setHistory] = useState<
-    Array<{
-      orderNumber: string;
-      fecha: string;
-      hora: string;
-      cliente: string;
-      equipo: string;
-      sucursal: string;
-    }>
-  >(() => {
+  Array<{
+    orderNumber: string;
+    fecha: string;
+    hora: string;
+    cliente: string;
+    equipo: string;
+    sucursal: string;
+  }>
+>(() => {
     try {
       const raw = localStorage.getItem("lfp_history");
       const arr = raw ? JSON.parse(raw) : [];
       return Array.isArray(arr) ? arr : [];
-    } catch (e) {
+    } catch {
       return [];
     }
   });
 
-  // ---- Brand palette ----
-  const brand = { primary: "#1F2937" }; // dark gray
-
-  // ---- Local state ----
   const [branch, setBranch] = useState("Núñez");
-  const [client, setClient] = useState({
-    name: "",
-    dni: "",
-    phone: "",
-    email: ""
-  });
-  const [device, setDevice] = useState({
-    type: "Celular",
-    brand: "",
-    model: "",
-    sn: "",
-    pass: ""
-  });
+  const [client, setClient] = useState({ name: "", dni: "", phone: "", email: "" });
+  const [device, setDevice] = useState({ type: "Celular", brand: "", model: "", sn: "", pass: "" });
   const [fail, setFail] = useState("");
   const [stateIn, setStateIn] = useState("");
   const [budget, setBudget] = useState("");
@@ -80,7 +61,6 @@ export default function OrdenDeTrabajo() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
-  // ---- Order number ----
   const orderNumber = useMemo(() => {
     const key = "lfp_order_seq";
     let n = Number(localStorage.getItem(key) || "99");
@@ -89,30 +69,10 @@ export default function OrdenDeTrabajo() {
     return `ORD-${String(n).padStart(4, "0")}`;
   }, []);
 
-  // ---- Date/time ----
   const now = useMemo(() => new Date(), []);
-  const fecha = useMemo(
-    () =>
-      new Intl.DateTimeFormat("es-AR", {
-        timeZone: "America/Argentina/Buenos_Aires",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric"
-      }).format(now),
-    [now]
-  );
-  const hora = useMemo(
-    () =>
-      new Intl.DateTimeFormat("es-AR", {
-        timeZone: "America/Argentina/Buenos_Aires",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false
-      }).format(now),
-    [now]
-  );
+  const fecha = useMemo(() => new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "numeric" }).format(now), [now]);
+  const hora = useMemo(() => new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit", hour12: false }).format(now), [now]);
 
-  // ---- Auto load logo ----
   useEffect(() => {
     try {
       const saved = localStorage.getItem("lfp_logo");
@@ -139,18 +99,15 @@ export default function OrdenDeTrabajo() {
     } catch {}
   }, []);
 
-  // ---- Dynamic favicon ----
   useEffect(() => {
-    if (!logo) return;
-    const link: HTMLLinkElement =
-      (document.querySelector("link[rel='icon']") as HTMLLinkElement) ||
-      document.createElement("link");
-    link.rel = "icon";
-    link.href = logo;
-    document.head.appendChild(link);
+    if (logo) {
+      const link = document.querySelector("link[rel='icon']") || document.createElement("link");
+      link.rel = "icon";
+      link.href = logo;
+      document.head.appendChild(link);
+    }
   }, [logo]);
 
-  // ---- Handlers ----
   async function onLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -176,26 +133,87 @@ export default function OrdenDeTrabajo() {
     reader.readAsDataURL(file);
   }
 
-  // ---- PDF generation ----
-  async function generatePDF(): Promise<{
-    fileName: string;
-    dataUrl: string;
-  }> {
+  async function generatePDF(): Promise<{ fileName: string; dataUrl: string }> {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const margin = 40;
     const width = doc.internal.pageSize.getWidth();
     const usable = width - margin * 2;
-    // ---- Section separator in PDF ----
-    const section = (title: string) => {
-      // draw section header
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(20);
-      doc.setFontSize(12);
-      let y = doc.lastAutoTable?.finalY || 160;
-      if (!y) y = 160;
-      doc.text(title, margin, y);
-      return y;
-    };
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(`ORDEN DE TRABAJO – N° ${orderNumber}`, margin + 16, margin + 26);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text(`Fecha: ${fecha}   |   Hora: ${hora}`, margin + 16, margin + 46);
+
+    if (logo) {
+      try {
+        doc.addImage(logo, "PNG", margin + usable - 200, margin + 6, 160, 56);
+      } catch {}
+    }
+
+    let y = margin + 100;
+    doc.setFont("helvetica", "bold");
+    doc.text("DATOS DEL CLIENTE / EQUIPO", margin, y);
+    y += 14;
+    doc.setFont("helvetica", "normal");
+    doc.text(`Cliente: ${client.name || "—"}`, margin, y);
+    y += 16;
+    doc.text(`DNI: ${client.dni || "—"}`, margin, y);
+    y += 16;
+    doc.text(`Teléfono: ${client.phone || "—"}`, margin, y);
+    y += 16;
+    doc.text(`Email: ${client.email || "—"}`, margin, y);
+    y += 16;
+    doc.text(`Equipo: ${device.type} ${device.brand} ${device.model}`, margin, y);
+    y += 16;
+    doc.text(`N° Serie / IMEI: ${device.sn || "—"}`, margin, y);
+    y += 16;
+    doc.text(`Clave / PIN: ${device.pass || "—"}`, margin, y);
+    y += 20;
+
+    doc.setFont("helvetica", "bold");
+    doc.text("DESCRIPCIÓN DE LA FALLA", margin, y);
+    y += 14;
+    doc.setFont("helvetica", "normal");
+    doc.text(doc.splitTextToSize(fail || "—", usable), margin, y);
+    y += 40;
+
+    doc.setFont("helvetica", "bold");
+    doc.text("ESTADO AL INGRESAR", margin, y);
+    y += 14;
+    doc.setFont("helvetica", "normal");
+    doc.text(doc.splitTextToSize(stateIn || "—", usable), margin, y);
+    y += 40;
+
+    doc.setFont("helvetica", "bold");
+    doc.text("PRESUPUESTO ESTIMADO", margin, y);
+    y += 14;
+    doc.setFont("helvetica", "normal");
+    doc.text(`$ ${budget || "0"}`, margin, y);
+    y += 40;
+
+    doc.setFont("helvetica", "bold");
+    doc.text("RECEPCIÓN", margin, y);
+    y += 14;
+    doc.setFont("helvetica", "normal");
+    doc.text(`Sucursal: ${branch}`, margin, y);
+    y += 16;
+    doc.text(`Técnico: ${tech || "—"}`, margin, y);
+    y += 20;
+
+    if (photo) {
+      try {
+        doc.addImage(photo, "JPEG", margin, y, 200, 150);
+        y += 170;
+      } catch {}
+    }
+
+    doc.setFontSize(10);
+    doc.text("Lott Fix & Parts • 11-2602-1568 • www.lott.com.ar • lucasrongo@gmail.com", margin, y + 30);
+
+    const dataUrl = doc.output("datauristring");
+    const fileName = `${orderNumber}.pdf`;
+    return { fileName, dataUrl };
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -229,9 +247,7 @@ export default function OrdenDeTrabajo() {
           })
         });
       }
-    } catch (err) {
-      console.error("Error enviando a GAS:", err);
-    }
+    } catch {}
 
     try {
       const entry = {
@@ -242,11 +258,9 @@ export default function OrdenDeTrabajo() {
         equipo: `${device.type} ${device.brand} ${device.model}`.trim(),
         sucursal: branch
       };
-      const historyRaw = localStorage.getItem("lfp_history");
-      const historyArr = historyRaw ? JSON.parse(historyRaw) : [];
-      historyArr.unshift(entry);
-      localStorage.setItem("lfp_history", JSON.stringify(historyArr));
-      setHistory(historyArr);
+      const h = [entry, ...history];
+      setHistory(h);
+      localStorage.setItem("lfp_history", JSON.stringify(h));
     } catch {}
 
     setDone(true);
@@ -254,64 +268,60 @@ export default function OrdenDeTrabajo() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-white">
-      <div className="max-w-5xl mx-auto p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen w-full bg-white p-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold">Orden de Trabajo</h1>
             <p className="text-sm mt-1">
-              N° <strong>{orderNumber}</strong> · Fecha {fecha} · Hora {hora}
+              N° <strong>{orderNumber}</strong> • Fecha {fecha} • Hora {hora}
             </p>
           </div>
           <div>
             {logo ? (
-              <img src={logo} alt="Logo" className="h-20" />
+              <img src={logo} alt="Logo" className="h-20 object-contain" />
             ) : (
-              <label className="cursor-pointer text-sm border px-4 py-2 rounded-lg flex items-center gap-2">
-                <Upload size={16} /> Cargar logo
-                <input
-                  type="file"
-                  accept="image/*,.svg"
-                  className="hidden"
-                  onChange={onLogoChange}
-                />
+              <label className="cursor-pointer text-sm border px-3 py-2 rounded flex items-center gap-2">
+                <Upload size={16} />
+                Cargar logo
+                <input type="file" accept="image/*" className="hidden" onChange={onLogoChange} />
               </label>
             )}
           </div>
         </div>
 
-        {/* Form */}
-        <Card className="rounded-lg border shadow">
+        <Card>
           <CardContent>
-            <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Sucursal *</Label>
                 <RadioGroup defaultValue="Núñez" onValueChange={setBranch}>
-                  <div className="flex gap-3 mt-2">
+                  <div className="flex gap-4 mt-2">
                     <label className="flex gap-2 items-center">
-                      <RadioGroupItem value="Núñez" /> Núñez
+                      <RadioGroupItem value="Núñez" />
+                      Núñez
                     </label>
                     <label className="flex gap-2 items-center">
-                      <RadioGroupItem value="Vicente López" /> Vicente López
+                      <RadioGroupItem value="Vicente López" />
+                      Vicente López
                     </label>
                   </div>
                 </RadioGroup>
               </div>
 
               <div>
-                <Label>Técnico *</Label>
-                <Input value={tech} onChange={(e) => setTech(e.target.value)} placeholder="Ej: Lucas Rongo" />
+                <Label>Técnico que recibe *</Label>
+                <Input value={tech} onChange={(e) => setTech(e.target.value)} required />
               </div>
 
               <div>
-                <Label>Nombre *</Label>
-                <Input value={client.name} onChange={(e) => setClient({ ...client, name: e.target.value })} />
+                <Label>Nombre y Apellido *</Label>
+                <Input value={client.name} onChange={(e) => setClient({ ...client, name: e.target.value })} required />
               </div>
 
               <div>
                 <Label>DNI *</Label>
-                <Input value={client.dni} onChange={(e) => setClient({ ...client, dni: e.target.value })} />
+                <Input value={client.dni} onChange={(e) => setClient({ ...client, dni: e.target.value })} required />
               </div>
 
               <div>
@@ -321,20 +331,21 @@ export default function OrdenDeTrabajo() {
 
               <div>
                 <Label>Email *</Label>
-                <Input value={client.email} onChange={(e) => setClient({ ...client, email: e.target.value })} />
+                <Input type="email" value={client.email} onChange={(e) => setClient({ ...client, email: e.target.value })} required />
               </div>
 
               <div>
-                <Label>Tipo *</Label>
+                <Label>Tipo de equipo *</Label>
                 <Select value={device.type} onValueChange={(v) => setDevice({ ...device, type: v })}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Tipo de equipo" />
+                    <SelectValue placeholder="Tipo" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Celular">Celular</SelectItem>
                     <SelectItem value="Tablet">Tablet</SelectItem>
                     <SelectItem value="Notebook">Notebook</SelectItem>
                     <SelectItem value="PC">PC</SelectItem>
+                    <SelectItem value="Otro">Otro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -360,49 +371,80 @@ export default function OrdenDeTrabajo() {
               </div>
 
               <div className="md:col-span-2">
-                <Label>Falla *</Label>
-                <Textarea rows={3} value={fail} onChange={(e) => setFail(e.target.value)} />
+                <Label>Descripción de la falla *</Label>
+                <Textarea rows={3} value={fail} onChange={(e) => setFail(e.target.value)} required />
               </div>
 
               <div className="md:col-span-2">
-                <Label>Estado al ingresar *</Label>
-                <Textarea rows={3} value={stateIn} onChange={(e) => setStateIn(e.target.value)} />
+                <Label>Estado del equipo al ingresar *</Label>
+                <Textarea rows={3} value={stateIn} onChange={(e) => setStateIn(e.target.value)} required />
               </div>
 
               <div>
-                <Label>Presupuesto ($)</Label>
+                <Label>Presupuesto estimado ($)</Label>
                 <Input value={budget} onChange={(e) => setBudget(e.target.value)} />
               </div>
 
               <div>
-                <Label>Foto del equipo</Label>
+                <Label>Foto del equipo (opcional)</Label>
                 <div className="flex items-center gap-2">
                   <label className="cursor-pointer flex items-center gap-2 border px-3 py-2 rounded">
-                    <ImageIcon size={14} /> Subir
-                    <input type="file" className="hidden" accept="image/*" onChange={onPhotoChange} />
+                    <ImageIcon size={16} /> Subir imagen
+                    <input type="file" accept="image/*" className="hidden" onChange={onPhotoChange} />
                   </label>
-                  {photo && <span className="text-green-600 text-xs">✅ Imagen ok</span>}
+                  {photo && <span className="text-green-600 text-xs flex items-center gap-1"><CheckCircle2 size={14} /> Imagen cargada</span>}
                 </div>
               </div>
 
-              <div className="md:col-span-2 flex justify-between">
-                <a href="https://wa.me/5491126021568" target="_blank" className="text-sm underline flex items-center gap-1">
-                  <Phone size={14} /> WhatsApp soporte
+              <div className="md:col-span-2 flex justify-between items-center pt-4">
+                <a href="https://wa.me/5491126021568" target="_blank" rel="noreferrer" className="text-sm underline flex items-center gap-2">
+                  <Phone size={16} /> WhatsApp soporte
                 </a>
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? "Generando orden…" : "Generar Orden (PDF)"}
+                  {submitting ? "Generando PDF..." : "Generar Orden (PDF)"}
                 </Button>
               </div>
             </form>
           </CardContent>
         </Card>
 
-        {/* Resultado */}
         {done && (
-          <motion.div className="mt-4 p-4 bg-green-100 text-green-800 rounded">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6 p-4 bg-green-100 border border-green-300 rounded">
             ✅ Orden generada y enviada correctamente
           </motion.div>
         )}
+
+        <div className="mt-8">
+          <h2 className="text-lg font-bold mb-2">Historial de órdenes</h2>
+          {history.length === 0 ? (
+            <p className="text-sm text-gray-500">Todavía no hay órdenes registradas.</p>
+          ) : (
+            <table className="w-full text-sm border">
+              <thead>
+                <tr className="bg-gray-100 text-left">
+                  <th className="p-2 border">N°</th>
+                  <th className="p-2 border">Fecha</th>
+                  <th className="p-2 border">Hora</th>
+                  <th className="p-2 border">Cliente</th>
+                  <th className="p-2 border">Equipo</th>
+                  <th className="p-2 border">Sucursal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((h, i) => (
+                  <tr key={i}>
+                    <td className="p-2 border">{h.orderNumber}</td>
+                    <td className="p-2 border">{h.fecha}</td>
+                    <td className="p-2 border">{h.hora}</td>
+                    <td className="p-2 border">{h.cliente}</td>
+                    <td className="p-2 border">{h.equipo}</td>
+                    <td className="p-2 border">{h.sucursal}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </div>
   );

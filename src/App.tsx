@@ -14,6 +14,7 @@ import { Label } from "./components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
 import { CheckCircle2, Image as ImageIcon, Upload } from "lucide-react";
 import jsPDF from "jspdf";
+import { GAS_WEBAPP_URL, DEFAULT_LOGO } from "./config";
 
 //━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // CONFIGURACIÓN DEL NEGOCIO
@@ -40,7 +41,7 @@ export default function OrdenDeTrabajo() {
   const [budget, setBudget] = useState("");
   const [tech, setTech] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
-  const [logo, setLogo] = useState<string | null>(BUSINESS.logoBase64 || null);
+  const [logo, setLogo] = useState<string | null>(DEFAULT_LOGO);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [activeTab, setActiveTab] = useState<"orden" | "historial">("orden");

@@ -1,7 +1,6 @@
 //━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// LOTT FIX & PARTS - ORDEN DE TRABAJO
-// App.tsx (PARTE 1)
-// Proyecto: React + Vite + TypeScript + Tailwind
+// LOTT FIX & PARTS - ORDEN DE TRABAJO (FINAL BUILD OK)
+// Compatible con Vite + TypeScript + Tailwind
 //━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -25,14 +24,13 @@ const BUSINESS = {
   email: "lucasrongo@gmail.com",
   website: "www.lott.com.ar",
   locations: ["Núñez", "Vicente López"],
-  logoBase64: "", // Se completa más adelante (Base64 del logo optimizado)
 };
 
 //━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // COMPONENTE PRINCIPAL
 //━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function OrdenDeTrabajo() {
-  //───────────────────────────── ESTADOS BÁSICOS ────────────────────────────────
+  //───────────────────────────── ESTADOS ────────────────────────────────
   const [branch, setBranch] = useState(BUSINESS.locations[0]);
   const [client, setClient] = useState({ name: "", dni: "", phone: "", email: "" });
   const [device, setDevice] = useState({ type: "Celular", brand: "", model: "", sn: "", pass: "" });
@@ -45,9 +43,9 @@ export default function OrdenDeTrabajo() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [activeTab, setActiveTab] = useState<"orden" | "historial">("orden");
-  const [history, setHistory] = useState<Array<{orderNumber:string;fecha:string;hora:string;cliente:string;equipo:string;sucursal:string;}>>([]);
+  const [history, setHistory] = useState<Array<{ orderNumber: string; fecha: string; hora: string; cliente: string; equipo: string; sucursal: string }>>([]);
 
-  //───────────────────────────── FECHA Y ORDEN ──────────────────────────────────
+  //───────────────────────────── FECHA Y ORDEN ────────────────────────────────
   const orderNumber = useMemo(() => {
     const key = "lfp_order_seq";
     let n = Number(localStorage.getItem(key) || "99");
@@ -60,7 +58,7 @@ export default function OrdenDeTrabajo() {
   const fecha = useMemo(() => new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "numeric" }).format(now), [now]);
   const hora = useMemo(() => new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit", hour12: false }).format(now), [now]);
 
-  //───────────────────────────── HANDLERS DE LOGO Y FOTO ────────────────────────
+  //───────────────────────────── HANDLERS DE IMÁGENES ────────────────────────────────
   function onPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -77,14 +75,13 @@ export default function OrdenDeTrabajo() {
     reader.readAsDataURL(file);
   }
 
-  //───────────────────────────── PDF GENERACIÓN ─────────────────────────────────
+  //───────────────────────────── PDF GENERACIÓN ────────────────────────────────
   async function generatePDF(): Promise<{ fileName: string; dataUrl: string }> {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const margin = 40;
     const width = doc.internal.pageSize.getWidth();
     const usable = width - margin * 2;
 
-    // Encabezado
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
     doc.text(`ORDEN DE TRABAJO – N° ${orderNumber}`, margin, margin + 20);
@@ -92,20 +89,18 @@ export default function OrdenDeTrabajo() {
     doc.setFontSize(11);
     doc.text(`Fecha: ${fecha}   |   Hora: ${hora}`, margin, margin + 40);
 
-    // Logo
     if (logo) {
       try {
         doc.addImage(logo, "PNG", margin + usable - 200, margin, 160, 56);
       } catch {}
     }
 
-    // Datos del cliente
     let y = margin + 90;
-    const text = (label: string, value: string, offset: number = 0) => {
+    const text = (label: string, value: string) => {
       doc.setFont("helvetica", "bold");
       doc.text(label, margin, y);
       doc.setFont("helvetica", "normal");
-      doc.text(value || "—", margin + 120 + offset, y);
+      doc.text(value || "—", margin + 120, y);
       y += 16;
     };
 
@@ -156,7 +151,8 @@ export default function OrdenDeTrabajo() {
     doc.save(`${orderNumber}.pdf`);
     return { fileName: `${orderNumber}.pdf`, dataUrl };
   }
-  //───────────────────────────── ENVÍO DEL FORMULARIO ───────────────────────────
+
+  //───────────────────────────── ENVÍO DEL FORMULARIO ────────────────────────────────
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!client.email || !client.dni || !fail || !stateIn) {
@@ -168,27 +164,40 @@ export default function OrdenDeTrabajo() {
     const pdf = await generatePDF();
 
     try {
-      const item = {
-        orderNumber,
-        fecha,
-        hora,
-        cliente: client.name,
-        equipo: `${device.type} ${device.brand} ${device.model}`.trim(),
-        sucursal: branch,
-      };
-      const key = "lfp_history";
-      const arrRaw = localStorage.getItem(key);
-      const arr = arrRaw ? JSON.parse(arrRaw) : [];
-      arr.unshift(item);
-      localStorage.setItem(key, JSON.stringify(arr));
-      setHistory(arr);
-    } catch {}
+      if (GAS_WEBAPP_URL) {
+        const payload = {
+          orderNumber, fecha, hora, branch,
+          client, device, fail, stateIn, budget, tech,
+          pdfDataUrl: pdf.dataUrl,
+          fileName: pdf.fileName,
+        };
+        await fetch(GAS_WEBAPP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+    } catch (err) {
+      console.error("Error enviando a GAS:", err);
+    }
+
+    const item = {
+      orderNumber, fecha, hora,
+      cliente: client.name,
+      equipo: `${device.type} ${device.brand} ${device.model}`.trim(),
+      sucursal: branch,
+    };
+    const arrRaw = localStorage.getItem("lfp_history");
+    const arr = arrRaw ? JSON.parse(arrRaw) : [];
+    arr.unshift(item);
+    localStorage.setItem("lfp_history", JSON.stringify(arr));
+    setHistory(arr);
 
     setSubmitting(false);
     setDone(true);
   }
 
-  //───────────────────────────── RENDER ─────────────────────────────────────────
+  //───────────────────────────── RENDER ────────────────────────────────
   return (
     <div className="min-h-screen w-full bg-gray-50 text-gray-900">
       <header className="bg-white border-b shadow-sm sticky top-0 z-50">
@@ -197,10 +206,9 @@ export default function OrdenDeTrabajo() {
             <h1 className="text-xl md:text-2xl font-semibold">{BUSINESS.name}</h1>
             <p className="text-xs text-gray-500">Gestión de órdenes de trabajo</p>
           </div>
-          {logo && (
-            <img src={logo} alt="Logo" className="h-12 md:h-16 object-contain" />
-          )}
+          {logo && <img src={logo} alt="Logo" className="h-12 md:h-16 object-contain" />}
         </div>
+
         <nav className="border-t flex justify-center gap-8 text-sm">
           <button
             onClick={() => setActiveTab("orden")}
@@ -247,6 +255,7 @@ export default function OrdenDeTrabajo() {
                   <Label>Nombre y Apellido *</Label>
                   <Input value={client.name} onChange={(e) => setClient({ ...client, name: e.target.value })} />
                 </div>
+
                 <div className="space-y-2">
                   <Label>DNI *</Label>
                   <Input value={client.dni} onChange={(e) => setClient({ ...client, dni: e.target.value })} />
@@ -256,6 +265,7 @@ export default function OrdenDeTrabajo() {
                   <Label>Teléfono</Label>
                   <Input value={client.phone} onChange={(e) => setClient({ ...client, phone: e.target.value })} />
                 </div>
+
                 <div className="space-y-2">
                   <Label>Email *</Label>
                   <Input type="email" value={client.email} onChange={(e) => setClient({ ...client, email: e.target.value })} />
@@ -360,12 +370,3 @@ export default function OrdenDeTrabajo() {
               )}
             </CardContent>
           </Card>
-        )}
-      </main>
-
-      <footer className="text-center text-xs text-gray-500 py-6">
-        {BUSINESS.name} • Tel: {BUSINESS.phone} • {BUSINESS.website} • {BUSINESS.email}
-      </footer>
-    </div>
-  );
-}

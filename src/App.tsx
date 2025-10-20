@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Upload, CheckCircle2, Image as ImageIcon, Search } from "lucide-react";
 import jsPDF from "jspdf";
 
-const GAS_WEBAPP_URL = import.meta.env.VITE_GAS_WEBAPP_URL || "";
+const GAS_WEBAPP_URL: string = (import.meta as any).env?.VITE_GAS_WEBAPP_URL || "";
 
 /** Datos de negocio centralizados (editables a futuro) */
 const BUSINESS = {
@@ -20,8 +20,8 @@ const BUSINESS = {
   email: "lucasrongo@gmail.com",
   website: "www.lott.com.ar",
   locations: ["Núñez", "Vicente López"],
-  // Si querés usar logo incrustado sin subir archivo, pegá aquí un DataURL base64: "data:image/png;base64,AAAA..."
-  logoBase64: "" // ← opcional: si lo dejás vacío, usa el de localStorage o el fallback tipográfico
+  // Si querés usar logo incrustado sin subir archivo, pegá aquí un DataURL base64 "data:image/png;base64,..."
+  logoBase64: "" // si queda vacío, toma el de localStorage o el fallback
 };
 
 async function svgToPng(dataUrl: string): Promise<string> {
@@ -40,8 +40,6 @@ async function svgToPng(dataUrl: string): Promise<string> {
 }
 
 export default function OrdenDeTrabajo() {
-  const safeText = (v: any) => (v === null || v === undefined ? "—" : typeof v === "string" ? v : String(v));
-
   type HistItem = {
     orderNumber: string;
     fecha: string;
@@ -49,8 +47,10 @@ export default function OrdenDeTrabajo() {
     cliente: string;
     equipo: string;
     sucursal: string;
-    pdfDataUrl?: string; // para "Ver PDF"
+    pdfDataUrl?: string; // permite "Ver PDF"
   };
+
+  const safeText = (v: any) => (v === null || v === undefined ? "—" : typeof v === "string" ? v : String(v));
 
   const [history, setHistory] = useState<HistItem[]>(() => {
     try {
@@ -76,7 +76,7 @@ export default function OrdenDeTrabajo() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
-  const [q, setQ] = useState(""); // buscador historial
+  const [q, setQ] = useState(""); // buscador en historial
 
   // Orden incremental local
   const orderNumber = useMemo(() => {
@@ -110,7 +110,7 @@ export default function OrdenDeTrabajo() {
     [now]
   );
 
-  // Logo: base64 -> localStorage -> fallback
+  // Logo: base64 -> localStorage -> fallback tipográfico
   useEffect(() => {
     try {
       if (BUSINESS.logoBase64) {
@@ -122,6 +122,7 @@ export default function OrdenDeTrabajo() {
       if (saved) {
         setLogo(saved);
       } else {
+        // Fallback con texto (por si no hay logo)
         const canvas = document.createElement("canvas");
         canvas.width = 640;
         canvas.height = 180;
@@ -186,6 +187,7 @@ export default function OrdenDeTrabajo() {
     const width = doc.internal.pageSize.getWidth();
     const usable = width - margin * 2;
 
+    // Header caja
     doc.setLineWidth(1.2);
     doc.setDrawColor(60);
     doc.setTextColor(0);
@@ -224,28 +226,28 @@ export default function OrdenDeTrabajo() {
     doc.text(`N° Serie / IMEI: ${device.sn || "—"}`, margin, y);
     y += 16;
     doc.text(`Clave / PIN: ${device.pass || "—"}`, margin, y);
-    y += 20;
+    y += 22;
 
     doc.setFont("helvetica", "bold");
     doc.text("DESCRIPCIÓN DE LA FALLA", margin, y);
     y += 14;
     doc.setFont("helvetica", "normal");
     doc.text(doc.splitTextToSize(fail || "—", usable), margin, y);
-    y += 40;
+    y += 44;
 
     doc.setFont("helvetica", "bold");
     doc.text("ESTADO AL INGRESAR", margin, y);
     y += 14;
     doc.setFont("helvetica", "normal");
     doc.text(doc.splitTextToSize(stateIn || "—", usable), margin, y);
-    y += 40;
+    y += 44;
 
     doc.setFont("helvetica", "bold");
     doc.text("PRESUPUESTO ESTIMADO", margin, y);
     y += 14;
     doc.setFont("helvetica", "normal");
     doc.text(`$ ${budget || "0"}`, margin, y);
-    y += 40;
+    y += 44;
 
     doc.setFont("helvetica", "bold");
     doc.text("RECEPCIÓN", margin, y);
@@ -254,7 +256,7 @@ export default function OrdenDeTrabajo() {
     doc.text(`Sucursal: ${branch}`, margin, y);
     y += 16;
     doc.text(`Técnico: ${tech || "—"}`, margin, y);
-    y += 20;
+    y += 22;
 
     if (photo) {
       try {
@@ -264,11 +266,7 @@ export default function OrdenDeTrabajo() {
     }
 
     doc.setFontSize(10);
-    doc.text(
-      `${BUSINESS.name} • Tel: ${BUSINESS.phone} • ${BUSINESS.website} • ${BUSINESS.email}`,
-      margin,
-      y + 30
-    );
+    doc.text(`${BUSINESS.name} • Tel: ${BUSINESS.phone} • ${BUSINESS.website} • ${BUSINESS.email}`, margin, y + 30);
 
     const dataUrl = doc.output("datauristring");
     const fileName = `${orderNumber}.pdf`;
@@ -291,16 +289,8 @@ export default function OrdenDeTrabajo() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            orderNumber,
-            fecha,
-            hora,
-            branch,
-            client,
-            device,
-            fail,
-            stateIn,
-            budget,
-            tech,
+            orderNumber, fecha, hora, branch,
+            client, device, fail, stateIn, budget, tech,
             pdfDataUrl: pdf.dataUrl,
             fileName: pdf.fileName
           })
@@ -325,37 +315,42 @@ export default function OrdenDeTrabajo() {
 
     setDone(true);
     setSubmitting(false);
-    setActiveTab("historial"); // ir directo a historial tras crear
+    setActiveTab("historial");
   }
 
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase();
     if (!qq) return history;
     return history.filter(
-      (h) =>
-        h.orderNumber.toLowerCase().includes(qq) ||
-        h.cliente.toLowerCase().includes(qq)
+      (h) => h.orderNumber.toLowerCase().includes(qq) || h.cliente.toLowerCase().includes(qq)
     );
   }, [q, history]);
 
   const Required = ({ children }: { children: React.ReactNode }) => (
     <span className="after:content-['*'] after:ml-1 after:text-gray-600">{children}</span>
   );
+
   return (
     <div className="min-h-screen w-full bg-white text-gray-800">
-      {/* Menú Superior */}
+      {/* Menú Superior fijo */}
       <div className="w-full bg-white shadow-sm border-b fixed top-0 left-0 z-20">
         <div className="max-w-5xl mx-auto flex justify-between items-center px-6 py-3">
           <h1 className="text-lg font-semibold">{BUSINESS.name}</h1>
           <div className="flex gap-2">
             <Button
-              variant={activeTab === "orden" ? "default" : "outline"}
+              className={`${activeTab === "orden"
+                  ? "bg-gray-800 text-white hover:bg-gray-900"
+                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                } rounded-xl px-4 py-2`}
               onClick={() => setActiveTab("orden")}
             >
               Nueva Orden
             </Button>
             <Button
-              variant={activeTab === "historial" ? "default" : "outline"}
+              className={`${activeTab === "historial"
+                  ? "bg-gray-800 text-white hover:bg-gray-900"
+                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                } rounded-xl px-4 py-2`}
               onClick={() => setActiveTab("historial")}
             >
               Historial
@@ -366,17 +361,17 @@ export default function OrdenDeTrabajo() {
 
       <div className="max-w-5xl mx-auto px-6 pt-24 pb-12">
         {activeTab === "orden" && (
-          <Card className="shadow-md border-gray-200">
-            <CardContent className="p-6 space-y-6">
+          <Card className="shadow-lg border-gray-200">
+            <CardContent className="p-8 space-y-7">
               <div className="flex justify-between items-center">
                 <div>
                   <p className="text-sm text-gray-500">
                     Orden <strong>{orderNumber}</strong> · {fecha} {hora}
                   </p>
                 </div>
-                <div>
+                <div className="drop-shadow-sm">
                   {logo ? (
-                    <img src={logo} alt="Logo" className="h-20 object-contain" />
+                    <img src={logo} alt="Logo" className="h-20 md:h-[60px] w-auto object-contain" style={{ maxWidth: 200 }} />
                   ) : (
                     <label className="text-xs border px-3 py-2 rounded cursor-pointer flex gap-1 items-center">
                       <Upload size={14} /> Subir logo
@@ -386,10 +381,10 @@ export default function OrdenDeTrabajo() {
                 </div>
               </div>
 
-              <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-7">
                 <div>
                   <Label><Required>Equipo recibido en</Required></Label>
-                  <RadioGroup defaultValue={branch} onValueChange={setBranch} className="flex gap-4 mt-2">
+                  <RadioGroup defaultValue={branch} onValueChange={setBranch} className="flex gap-6 mt-2">
                     {BUSINESS.locations.map((loc) => (
                       <label key={loc} className="flex items-center gap-2">
                         <RadioGroupItem value={loc} /> {loc}
@@ -420,7 +415,7 @@ export default function OrdenDeTrabajo() {
 
                 <div>
                   <Label><Required>Email</Required></Label>
-                  <Input value={client.email} onChange={(e) => setClient({ ...client, email: e.target.value })} />
+                  <Input type="email" value={client.email} onChange={(e) => setClient({ ...client, email: e.target.value })} />
                 </div>
 
                 <div>
@@ -463,21 +458,31 @@ export default function OrdenDeTrabajo() {
                     <ImageIcon size={14} /> Subir imagen
                     <input type="file" accept="image/*" className="hidden" onChange={onPhotoChange} />
                   </label>
-                  {photo && <p className="text-xs text-green-600 mt-1"><CheckCircle2 size={14} /> Imagen cargada</p>}
+                  {photo && <p className="text-xs text-green-600 mt-1 flex items-center gap-1"><CheckCircle2 size={14} /> Imagen cargada</p>}
                 </div>
 
                 <div className="md:col-span-2 flex justify-end">
-                  <Button type="submit" disabled={submitting}>
+                  <Button
+                    className="bg-gray-800 text-white hover:bg-gray-900 rounded-xl px-6 py-2"
+                    type="submit"
+                    disabled={submitting}
+                  >
                     {submitting ? "Generando PDF..." : "Generar Orden"}
                   </Button>
                 </div>
               </form>
+
+              {done && (
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-2 p-3 bg-green-50 text-green-800 border border-green-200 rounded">
+                  ✅ Orden generada correctamente
+                </motion.div>
+              )}
             </CardContent>
           </Card>
         )}
 
         {activeTab === "historial" && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="flex items-center gap-2">
               <Search className="text-gray-500" size={18} />
               <Input placeholder="Buscar por orden o cliente" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -507,7 +512,7 @@ export default function OrdenDeTrabajo() {
                       <td className="border p-2">{h.sucursal}</td>
                       <td className="border p-2">
                         {h.pdfDataUrl ? (
-                          <a href={h.pdfDataUrl} download={`${h.orderNumber}.pdf`} className="text-blue-600 underline">
+                          <a href={h.pdfDataUrl} download={`${h.orderNumber}.pdf`} className="text-blue-700 underline">
                             Ver PDF
                           </a>
                         ) : "—"}
@@ -519,6 +524,11 @@ export default function OrdenDeTrabajo() {
             )}
           </div>
         )}
+      </div>
+
+      {/* Footer simple */}
+      <div className="text-center text-xs text-gray-500 pb-6">
+        {BUSINESS.name} • {BUSINESS.locations.join(" / ")} • Tel: {BUSINESS.phone} • {BUSINESS.website} • {BUSINESS.email}
       </div>
     </div>
   );

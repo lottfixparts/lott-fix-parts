@@ -366,6 +366,7 @@ export default function OrdenDeTrabajo() {
                   </table>
                 </div>
               ) : (
+            
                 <p className="text-sm text-gray-500">No hay órdenes registradas todavía.</p>
               )}
             </CardContent>

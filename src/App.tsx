@@ -18,7 +18,7 @@ import jsPDF from "jspdf";
 const GAS_WEBAPP_URL = import.meta.env.VITE_GAS_WEBAPP_URL as string;
 
 // Logo embebido (base64 transparente)
-const LOGO_BASE64 = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAR8AAADICAYAAABFzYijAAA...TRUNCATED...`;
+const LOGO_BASE64 = <img src="/Standard.jpg" alt="Lott Fix & Parts" className="h-20 object-contain ml-auto" /> ;
 
 export default function OrdenDeTrabajo() {
   const [branch, setBranch] = useState("Núñez");

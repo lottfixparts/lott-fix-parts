@@ -43,11 +43,22 @@ export default function OrdenDeTrabajo() {
   const fecha = useMemo(() => new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(now), [now]);
   const hora = useMemo(() => new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false }).format(now), [now]);
 
-  async function generatePDF(): Promise<{ fileName: string; dataUrl: string }> {
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const margin = 40;
-    const width = doc.internal.pageSize.getWidth();
-    const usable = width - margin * 2;
+  async function generatePDF(): try {
+  const logoImg = await fetch("/Standard.jpg")
+    .then((r) => r.blob())
+    .then(
+      (b) =>
+        new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.readAsDataURL(b);
+        })
+    );
+  doc.addImage(logoImg, "JPEG", margin + usable - 200, margin + 6, 160, 56);
+} catch (e) {
+  console.warn("⚠️ No se pudo agregar el logo al PDF:", e);
+}
+
 
     // Fondo gris claro
     doc.setFillColor(249, 249, 249);

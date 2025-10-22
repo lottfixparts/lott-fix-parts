@@ -321,7 +321,7 @@ export default function OrdenDeTrabajo() {
       </main>
 
       <footer className="text-center text-xs text-gray-500 py-6">
-        {BUSINESS.name} • Tel: {BUSINESS.phone} • {BUSINESS.website} • {BUSINESS.email}
+doc.text("Tel: 11-2602-1568 (WhatsApp)   ·   Web: www.lott.com.ar   ·   Email: lucasrongo@gmail.com", margin, 840, { maxWidth: usable });
       </footer>
     </div>
   );

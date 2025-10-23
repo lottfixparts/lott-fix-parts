@@ -4,7 +4,7 @@
 
 // URL del WebApp de Google Apps Script (editar más adelante)
 export const GAS_WEBAPP_URL =
-  "https://script.google.com/macros/s/AKfycbyhKnf1EXxpTGSIGDMQHt9i3RhsZbPqbWkuw-QlAv0ymRdK_DZT9UntmSOnpSqzW2AC/exec";
+  "https://script.google.com/macros/s/AKfycbzjnuaRgHZNjwIdyJEJ1sPDIWIPXRKvhQdKCguQjbqxhXpafUGu2_1mXnhlP27470j0/exec";
 
 // Logo por defecto (Base64 generado desde tu imagen Standard.jpg)
 export const DEFAULT_LOGO =

@@ -2,26 +2,52 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#333333" />
-    <meta name="description" content="Gestión de órdenes de servicio - Lott Fix & Parts" />
-    <meta name="author" content="Lucas Rongo" />
-
-    <title>Lott Fix & Parts</title>
-
-    <!-- Favicon -->
     <link rel="icon" type="image/png" href="/Standard.jpg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lott Fix & Parts – Órdenes de trabajo</title>
 
     <!-- Fuente limpia y moderna -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
 
-    <!-- Estilos de Tailwind -->
-    <link rel="stylesheet" href="/src/index.css">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #f9fafb;
+        color: #1f2937;
+      }
+      header {
+        background-color: #ffffff;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      footer {
+        color: #6b7280;
+      }
+    </style>
   </head>
-  <body class="bg-gray-50 text-gray-800 font-[Inter]">
-    <div id="root"></div>
+  <body class="min-h-screen flex flex-col">
+    <header class="flex items-center justify-between px-6 py-3 shadow-sm">
+      <div>
+        <h1 class="text-xl font-semibold">Lott Fix & Parts</h1>
+        <p class="text-xs text-gray-500">Gestión de órdenes de trabajo</p>
+      </div>
+      <img
+        src="/Standard.jpg"
+        alt="Lott Fix & Parts"
+        class="h-12 w-auto object-contain"
+      />
+    </header>
+
+    <div id="root" class="flex-1"></div>
+
+    <footer class="text-center py-6 text-sm">
+      © 2025 Lott Fix & Parts – Todos los derechos reservados
+    </footer>
 
     <script type="module" src="/src/main.tsx"></script>
   </body>

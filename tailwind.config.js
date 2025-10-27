@@ -7,10 +7,8 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: {
-          DEFAULT: "#333333", // gris oscuro elegante
-          light: "#f5f5f5",
-        },
+        primary: "#1f2937", // gris oscuro
+        accent: "#4b5563",  // gris medio
       },
       borderRadius: {
         xl: "1rem",

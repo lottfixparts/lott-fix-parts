@@ -1,9 +1,3 @@
-//━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// CONFIGURACIÓN GLOBAL – LOTT FIX & PARTS
-//━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Logo por defecto (Base64 generado desde tu imagen Standard.jpg)
-export const DEFAULT_LOGO =
-  "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAA";
-// Configuración del backend de Google Apps Script
-// ⚙️ IMPORTANTE: reemplazá la URL por la tuya de "Implementar como aplicación web"
-export const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyztSh2Wy87MErc5JDOBfk_WQRU_f34kKWJ5Veb-eoiJi0i2yZ8FXefncJyhjVfsuso/exec";
+// URL del WebApp (Backend GAS)
+export const GAS_WEBAPP_URL =
+  "https://script.google.com/macros/s/AKfycbxJH2Kb-4VFyzZq0CqzXZFQcbUSXz2dD6tc5N07JIAIIotRWZChnv-x0lgXtUzj_Hi6/exec";

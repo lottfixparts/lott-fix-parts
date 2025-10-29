@@ -167,7 +167,7 @@ export default function App() {
 
     try {
       if (GAS_WEBAPP_URL) {
-        await fetch(GAS_WEBAPP_URL, {
+        await fetch("/api/orden", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

@@ -168,14 +168,16 @@ export default function App() {
     try {
       if (GAS_WEBAPP_URL) {
         await fetch("/api/orden", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderNumber, fecha, hora, branch,
-            client, device, fail, stateIn, budget, tech,
-            pdfDataUrl: pdf.dataUrl, fileName: pdf.fileName,
-          }),
-        });
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    orderNumber, fecha, hora, branch,
+    client, device, fail, stateIn, budget, tech,
+    pdfDataUrl: pdf.dataUrl,
+    fileName: pdf.fileName
+  }),
+});
+
       }
     } catch (err) {
       console.error("Error enviando a GAS:", err);

@@ -1,3 +1,3 @@
 // URL del WebApp (Backend GAS)
 export const GAS_WEBAPP_URL =
-  "https://script.google.com/macros/s/AKfycbz8feAdIKVRwSeISV7tquUdbUWa6Mhh_9DhiReDVc-N0MVa_xHVh3Yk5QBRLCmz_Go/exec";
+  "https://script.google.com/macros/s/AKfycbz_yB9d-qYDaCfOLC-zpiyZTG5ITzrYnKqbsP7_8rRYU4uSHAsWDoD57CKGalVSJ405/exec";

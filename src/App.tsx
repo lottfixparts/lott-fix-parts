@@ -18,7 +18,7 @@ const BUSINESS = {
 
 type Location = (typeof BUSINESS.locations)[number];
 
-export default function App() {
+export default function OrdenDeTrabajo() {
   const [branch, setBranch] = useState<Location | "">("");
   const [client, setClient] = useState({ name: "", dni: "", phone: "", email: "" });
   const [device, setDevice] = useState({ type: "Celular", brand: "", model: "", sn: "", pass: "" });
@@ -28,7 +28,7 @@ export default function App() {
   const [tech, setTech] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
-  const [activeTab, setActiveTab] = useState<"orden" | "historial">("orden");
+
   const [history, setHistory] = useState<
     Array<{ orderNumber: string; fecha: string; hora: string; cliente: string; equipo: string; sucursal: string }>
   >(() => {
@@ -40,7 +40,6 @@ export default function App() {
     }
   });
 
-  // Generar número de orden único
   const orderNumber = useMemo(() => {
     const key = "lfp_order_seq";
     let n = Number(localStorage.getItem(key) || "99");
@@ -49,47 +48,16 @@ export default function App() {
     return `ORD-${String(n).padStart(4, "0")}`;
   }, []);
 
-  // Fecha y hora
   const now = useMemo(() => new Date(), []);
-  const fecha = useMemo(
-    () =>
-      new Intl.DateTimeFormat("es-AR", {
-        timeZone: "America/Argentina/Buenos_Aires",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      }).format(now),
-    [now]
-  );
-  const hora = useMemo(
-    () =>
-      new Intl.DateTimeFormat("es-AR", {
-        timeZone: "America/Argentina/Buenos_Aires",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      }).format(now),
-    [now]
-  );
+  const fecha = useMemo(() => now.toLocaleDateString("es-AR"), [now]);
+  const hora = useMemo(() => now.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }), [now]);
 
-  // Generar PDF
   async function generatePDF(): Promise<{ fileName: string; dataUrl: string }> {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     const margin = 40;
     const usable = pageW - margin * 2;
-
-    doc.setFillColor(249, 249, 249);
-    doc.rect(0, 0, pageW, pageH, "F");
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text(`ORDEN DE TRABAJO – N° ${orderNumber}`, margin, margin + 20);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(`Fecha: ${fecha}   |   Hora: ${hora}`, margin, margin + 40);
 
     try {
       const response = await fetch("/Standard.jpg");
@@ -100,98 +68,100 @@ export default function App() {
         reader.readAsDataURL(blob);
       });
       doc.addImage(logoDataUrl, "JPEG", pageW - 200, margin, 140, 50);
-    } catch (e) {
-      console.warn("No se pudo incluir el logo en el PDF:", e);
-    }
+    } catch {}
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(`ORDEN DE TRABAJO – N° ${orderNumber}`, margin, margin + 20);
+
+    doc.setFontSize(11);
+    doc.text(`Fecha: ${fecha}  |  Hora: ${hora}`, margin, margin + 40);
 
     let y = margin + 90;
-    const section = (title: string) => {
+
+    const section = (t: string) => {
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(50);
-      doc.text(title, margin, y);
-      y += 10;
-      doc.setDrawColor(80);
+      doc.text(t, margin, y);
+      y += 12;
+      doc.setDrawColor(100);
       doc.line(margin, y, pageW - margin, y);
       y += 14;
+      doc.setFont("helvetica", "normal");
     };
 
-    section("DATOS DEL CLIENTE / EQUIPO");
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(`Cliente: ${client.name || "—"}`, margin, y); y += 16;
-    doc.text(`DNI: ${client.dni || "—"}`, margin, y); y += 16;
-    doc.text(`Teléfono: ${client.phone || "—"}`, margin, y); y += 16;
-    doc.text(`Email: ${client.email || "—"}`, margin, y); y += 16;
-    doc.text(`Sucursal: ${branch || "—"}`, margin, y); y += 16;
+    section("CLIENTE");
+    doc.text(`Nombre: ${client.name}`, margin, y); y += 16;
+    doc.text(`DNI: ${client.dni}`, margin, y); y += 16;
+    doc.text(`Teléfono: ${client.phone || "-"}`, margin, y); y += 16;
+    doc.text(`Email: ${client.email}`, margin, y); y += 16;
+
+    section("EQUIPO");
+    doc.text(`Sucursal: ${branch}`, margin, y); y += 16;
     doc.text(`Equipo: ${device.type} ${device.brand} ${device.model}`, margin, y); y += 16;
+    doc.text(`Serie/IMEI: ${device.sn || "-"}`, margin, y); y += 16;
+    doc.text(`Clave/PIN: ${device.pass || "-"}`, margin, y); y += 16;
 
-    section("DESCRIPCIÓN DE LA FALLA");
-    const desc = doc.splitTextToSize(fail || "—", usable);
-    doc.text(desc, margin, y);
-    y += desc.length * 14 + 10;
+    section("FALLA");
+    const descFail = doc.splitTextToSize(fail || "-", usable);
+    doc.text(descFail, margin, y);
+    y += descFail.length * 14 + 10;
 
-    section("ESTADO DEL EQUIPO AL INGRESAR");
-    const est = doc.splitTextToSize(stateIn || "—", usable);
-    doc.text(est, margin, y);
-    y += est.length * 14 + 10;
+    section("ESTADO AL INGRESAR");
+    const descState = doc.splitTextToSize(stateIn || "-", usable);
+    doc.text(descState, margin, y);
+    y += descState.length * 14 + 10;
 
-    section("PRESUPUESTO ESTIMADO");
+    section("PRESUPUESTO");
     doc.text(`$ ${budget || "0"}`, margin, y);
-    y += 20;
+    y += 40;
 
-    section("RECEPCIÓN");
-    doc.text(`Equipo recibido en: ${branch || "—"}`, margin, y); y += 16;
-    doc.text(`Técnico que recibe: ${tech || "—"}`, margin, y);
-
-    // Footer
+    const footerY = pageH - 35;
+    const footer = `Tel: 11-2602-1568 (WhatsApp)   ·   Web: www.lott.com.ar   ·   Email: lucasrongo@gmail.com`;
+    const tw = doc.getTextWidth(footer);
     doc.setFontSize(10);
-    doc.setTextColor(120);
-    const footerText = "Tel: 11-2602-1568 (WhatsApp)   ·   Web: www.lott.com.ar   ·   Email: lucasrongo@gmail.com";
-    const footerWidth = doc.getTextWidth(footerText);
-    doc.text(footerText, (pageW - footerWidth) / 2, pageH - 40);
+    doc.setTextColor(80);
+    doc.text(footer, (pageW - tw) / 2, footerY);
 
     const dataUrl = doc.output("datauristring");
-    doc.save(`${orderNumber}.pdf`);
     return { fileName: `${orderNumber}.pdf`, dataUrl };
   }
 
-  // Enviar datos
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!branch) return alert("Seleccioná la sucursal de recepción (obligatoria)");
-    if (!client.email || !client.dni || !fail || !stateIn)
-      return alert("Completá Email, DNI, Falla y Estado al ingresar (obligatorios)");
+
+    if (!branch) return alert("Elegí sucursal");
+    if (!client.email || !client.dni || !fail || !stateIn) return alert("Campos obligatorios faltantes");
 
     setSubmitting(true);
+
     const pdf = await generatePDF();
 
     try {
-              await fetch("/api/orden", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    orderNumber, fecha, hora, branch,
-    client, device, fail, stateIn, budget, tech,
-    pdfDataUrl: pdf.dataUrl,
-    fileName: pdf.fileName
-  }),
-});
-
+      if (GAS_WEBAPP_URL) {
+        await fetch(GAS_WEBAPP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderNumber, fecha, hora, branch,
+            client, device, fail, stateIn, budget, tech,
+            pdfDataUrl: pdf.dataUrl, fileName: pdf.fileName,
+          }),
+        });
       }
     } catch (err) {
       console.error("Error enviando a GAS:", err);
     }
 
-    // Guardar historial
-    const item = { orderNumber, fecha, hora, cliente: client.name, equipo: `${device.type} ${device.brand} ${device.model}`.trim(), sucursal: branch };
-    try {
-      const key = "lfp_history";
-      const arrRaw = localStorage.getItem(key);
-      const arr = arrRaw ? JSON.parse(arrRaw) : [];
-      arr.unshift(item);
-      localStorage.setItem(key, JSON.stringify(arr));
-      setHistory(arr);
-    } catch {}
+    const item = {
+      orderNumber, fecha, hora,
+      cliente: client.name,
+      equipo: `${device.type} ${device.brand} ${device.model}`,
+      sucursal: branch,
+    };
+
+    const arr = [item, ...history];
+    localStorage.setItem("lfp_history", JSON.stringify(arr));
+    setHistory(arr);
 
     setSubmitting(false);
     setDone(true);
@@ -199,170 +169,108 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800">
-      {/* Barra fija */}
-      <nav className="bg-gray-800 text-white fixed top-0 left-0 w-full shadow-md z-50">
-        <div className="max-w-5xl mx-auto flex justify-center space-x-8 py-3 text-sm font-semibold">
-          <button
-            onClick={() => setActiveTab("orden")}
-            className={`px-4 py-2 rounded-xl transition ${activeTab === "orden" ? "bg-gray-700" : "hover:bg-gray-700"}`}
-          >
-            Orden
-          </button>
-          <button
-            onClick={() => setActiveTab("historial")}
-            className={`px-4 py-2 rounded-xl transition ${activeTab === "historial" ? "bg-gray-700" : "hover:bg-gray-700"}`}
-          >
-            Historial
-          </button>
+      <header className="bg-white border-b shadow-sm">
+        <div className="max-w-5xl mx-auto flex items-center justify-between p-4">
+          <h1 className="text-xl font-semibold">Orden de Trabajo</h1>
+          <img src="/Standard.jpg" className="h-14" />
         </div>
-      </nav>
+      </header>
 
-      <main className="pt-20 max-w-4xl mx-auto p-6">
-        {activeTab === "orden" ? (
-          <Card className="rounded-2xl shadow-md border-gray-200 bg-white">
-            <CardContent className="p-8 space-y-8">
-              <header className="flex items-center justify-between mb-4">
-                <h1 className="text-2xl font-semibold">Nueva Orden de Trabajo</h1>
-                <img src="/Standard.jpg" alt="Lott Fix & Parts" className="h-16 object-contain" />
-              </header>
+      <main className="max-w-4xl mx-auto p-6">
+        <Card className="shadow-md border bg-white">
+          <CardContent className="space-y-6 p-6">
+            <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Sucursal */}
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Equipo recibido en *</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                    {BUSINESS.locations.map((loc) => (
-                      <button
-                        key={loc}
-                        type="button"
-                        onClick={() => setBranch(loc)}
-                        className={`p-6 rounded-xl border-2 text-lg font-semibold transition-all ${
-                          branch === loc
-                            ? "border-gray-800 bg-gray-100 shadow-md"
-                            : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
-                        }`}
-                      >
-                        {loc}
-                      </button>
-                    ))}
-                  </div>
+              <div className="col-span-2">
+                <Label>Equipo recibido en *</Label>
+                <div className="flex gap-3 mt-2">
+                  {BUSINESS.locations.map((loc) => (
+                    <button
+                      key={loc}
+                      type="button"
+                      onClick={() => setBranch(loc)}
+                      className={`px-4 py-2 rounded-xl text-sm border-2 ${
+                        branch === loc ? "bg-gray-900 text-white" : "bg-gray-100"
+                      }`}
+                    >
+                      {loc}
+                    </button>
+                  ))}
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Técnico que recibe</Label>
-                  <Input value={tech} onChange={(e) => setTech(e.target.value)} placeholder="Ej: Lucas Rongo" />
-                </div>
+              <div className="col-span-2 space-y-1">
+                <Label>Nombre *</Label>
+                <Input value={client.name} onChange={(e) => setClient({ ...client, name: e.target.value })} />
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Nombre y Apellido *</Label>
-                  <Input value={client.name} onChange={(e) => setClient({ ...client, name: e.target.value })} />
-                </div>
+              <div className="space-y-1">
+                <Label>DNI *</Label>
+                <Input value={client.dni} onChange={(e) => setClient({ ...client, dni: e.target.value })} />
+              </div>
 
-                <div className="space-y-2">
-                  <Label>DNI *</Label>
-                  <Input value={client.dni} onChange={(e) => setClient({ ...client, dni: e.target.value })} />
-                </div>
+              <div className="space-y-1">
+                <Label>Email *</Label>
+                <Input value={client.email} onChange={(e) => setClient({ ...client, email: e.target.value })} />
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Teléfono</Label>
-                  <Input value={client.phone} onChange={(e) => setClient({ ...client, phone: e.target.value })} />
-                </div>
+              <div className="space-y-1">
+                <Label>Teléfono</Label>
+                <Input value={client.phone} onChange={(e) => setClient({ ...client, phone: e.target.value })} />
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Email *</Label>
-                  <Input type="email" value={client.email} onChange={(e) => setClient({ ...client, email: e.target.value })} />
-                </div>
+              <div className="space-y-1">
+                <Label>Técnico</Label>
+                <Input value={tech} onChange={(e) => setTech(e.target.value)} placeholder="Lucas" />
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Tipo de equipo</Label>
-                  <Select value={device.type} onValueChange={(v) => setDevice({ ...device, type: v })}>
-                    <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Celular">Celular</SelectItem>
-                      <SelectItem value="Tablet">Tablet</SelectItem>
-                      <SelectItem value="Notebook">Notebook</SelectItem>
-                      <SelectItem value="PC">PC</SelectItem>
-                      <SelectItem value="Otro">Otro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-1">
+                <Label>Tipo</Label>
+                <Select value={device.type} onValueChange={(v) => setDevice({ ...device, type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Celular">Celular</SelectItem>
+                    <SelectItem value="Tablet">Tablet</SelectItem>
+                    <SelectItem value="Notebook">Notebook</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <div className="space-y-2"><Label>Marca</Label><Input value={device.brand} onChange={(e) => setDevice({ ...device, brand: e.target.value })} /></div>
-                <div className="space-y-2"><Label>Modelo</Label><Input value={device.model} onChange={(e) => setDevice({ ...device, model: e.target.value })} /></div>
-                <div className="space-y-2"><Label>N° Serie / IMEI</Label><Input value={device.sn} onChange={(e) => setDevice({ ...device, sn: e.target.value })} /></div>
-                <div className="space-y-2"><Label>Clave / PIN</Label><Input value={device.pass} onChange={(e) => setDevice({ ...device, pass: e.target.value })} /></div>
+              <div className="space-y-1"><Label>Marca</Label><Input value={device.brand} onChange={(e) => setDevice({ ...device, brand: e.target.value })} /></div>
+              <div className="space-y-1"><Label>Modelo</Label><Input value={device.model} onChange={(e) => setDevice({ ...device, model: e.target.value })} /></div>
+              <div className="space-y-1"><Label>IMEI</Label><Input value={device.sn} onChange={(e) => setDevice({ ...device, sn: e.target.value })} /></div>
+              <div className="space-y-1"><Label>Clave</Label><Input value={device.pass} onChange={(e) => setDevice({ ...device, pass: e.target.value })} /></div>
 
-                <div className="md:col-span-2 space-y-2">
-                  <Label>Descripción de la falla *</Label>
-                  <Textarea rows={4} className="leading-relaxed" value={fail} onChange={(e) => setFail(e.target.value)} />
-                </div>
+              <div className="col-span-2 space-y-1">
+                <Label>Falla *</Label>
+                <Textarea value={fail} rows={2} onChange={(e) => setFail(e.target.value)} />
+              </div>
 
-                <div className="md:col-span-2 space-y-2">
-                  <Label>Estado del equipo al ingresar *</Label>
-                  <Textarea rows={3} className="leading-relaxed" value={stateIn} onChange={(e) => setStateIn(e.target.value)} />
-                </div>
+              <div className="col-span-2 space-y-1">
+                <Label>Estado *</Label>
+                <Textarea value={stateIn} rows={2} onChange={(e) => setStateIn(e.target.value)} />
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Presupuesto estimado ($)</Label>
-                  <Input value={budget} onChange={(e) => setBudget(e.target.value)} />
-                </div>
+              <div className="space-y-1">
+                <Label>Presupuesto ($)</Label>
+                <Input value={budget} onChange={(e) => setBudget(e.target.value)} />
+              </div>
 
-                <div className="md:col-span-2 flex justify-end">
-                  <Button type="submit" disabled={submitting} className="rounded-2xl px-8 py-2">
-                    {submitting ? "Generando PDF…" : "Generar Orden (PDF)"}
-                  </Button>
-                </div>
-              </form>
+              <div className="col-span-2 flex justify-end">
+                <Button disabled={submitting} type="submit">
+                  {submitting ? "Enviando…" : "Generar Orden (PDF)"}
+                </Button>
+              </div>
+            </form>
 
-              {done && (
-                <div className="mt-4 p-4 rounded-xl border text-sm bg-green-50 border-green-200 text-green-900">
-                  ✅ Orden <b>{orderNumber}</b> generada y registrada.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="rounded-2xl shadow-md border-gray-200 bg-white">
-            <CardContent className="p-8">
-              <h2 className="text-xl font-bold mb-4">Historial de órdenes</h2>
-              {history.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm border">
-                    <thead className="bg-gray-50">
-                      <tr className="text-left">
-                        <th className="p-2 border">N°</th>
-                        <th className="p-2 border">Fecha</th>
-                        <th className="p-2 border">Hora</th>
-                        <th className="p-2 border">Cliente</th>
-                        <th className="p-2 border">Equipo</th>
-                        <th className="p-2 border">Sucursal</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {history.map((h, i) => (
-                        <tr key={`${h.orderNumber}-${i}`}>
-                          <td className="p-2 border">{h.orderNumber}</td>
-                          <td className="p-2 border">{h.fecha}</td>
-                          <td className="p-2 border">{h.hora}</td>
-                          <td className="p-2 border">{h.cliente}</td>
-                          <td className="p-2 border">{h.equipo}</td>
-                          <td className="p-2 border">{h.sucursal}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">No hay órdenes registradas todavía.</p>
-              )}
-            </CardContent>
-          </Card>
-        )}
+            {done && (
+              <div className="bg-green-100 p-3 rounded text-green-800 text-sm">
+                ✅ Orden generada y registrada correctamente
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </main>
-
-      <footer className="text-center text-xs text-gray-500 py-6">
-        Lott Fix & Parts · Tel: 11-2602-1568 (WhatsApp) · www.lott.com.ar · lucasrongo@gmail.com
-      </footer>
     </div>
   );
 }

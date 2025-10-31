@@ -1,15 +1,10 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
-// ✅ Config compatible con ESM y Vercel
+// ✅ Configuración compatible con Vercel
 export default defineConfig({
   plugins: [react()],
-  build: {
-    target: "esnext",
+  server: {
+    port: 5173,
   },
-  resolve: {
-    alias: {
-      '@': '/src',
-    },
-  },
-})
+});

@@ -10,7 +10,10 @@
   "dependencies": {
     "jspdf": "^2.5.1",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "@vercel/node": "^5.5.3",
+    "googleapis": "^125.0.0",
+    "nodemailer": "^6.9.4"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",
